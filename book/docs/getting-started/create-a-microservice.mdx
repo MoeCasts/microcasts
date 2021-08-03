@@ -1,0 +1,460 @@
+---
+sidebar_position: 2
+---
+
+# 创建微服务
+
+## 初始化项目
+
+微服务虽然是可以分开部署，但管理还是应该放在一起，因此，我们先创建一个项目文件夹，然后再在这个文件夹中创建微服务。
+
+```shell
+mkidr microcasts
+cd microcasts
+
+# 初始化整个项目的 go.mod
+go mod init github.com/moecasts/microcasts
+```
+
+由于是本地开发，因此我们可以先将 go.mod 的 `github.com/moecasts/microcasts` 替换成本地文件夹
+
+```mod title="./go.mod"
+module github.com/moecasts/microcasts
+
+go 1.15
+
+// 替换成本地
+replace github.com/moecasts/microcasts => ./
+```
+
+## 创建一个微服务
+
+在安装完代码生成器之后，我们只需要运行一行命令，即可生成一个微服务的模版了。
+
+```shell
+kit new service novels -m github.com/moecasts/microcasts/novels
+```
+
+之后会由如下的目录结构：
+
+```
+➜  tree
+.
+├── go.mod
+└── novels
+    ├── go.mod
+    └── pkg
+        └── service
+            └── service.go
+```
+
+### 编写 service.go
+
+在 service.go 中，我们可以先定义我们的业务接口:
+
+```go title="./novels/pkg/service/service.go"
+package service
+
+import "context"
+
+// NovelsService describes the service.
+type NovelsService interface {
+	// Browse the novels list
+	Browse(ctx context.Context, request interface{}) (rs interface{}, err error)
+}
+```
+
+### 根据 service.go 生成代码
+
+```shell
+kit generate service novels --dmw -t grpc
+```
+
+命令运行完之后会看到如下信息：
+```shell
+WARN[0000] ===============================================================
+WARN[0000] The GRPC implementation is not finished you need to update your
+WARN[0000]  service proto buffer and run the compile script.
+WARN[0000] ---------------------------------------------------------------
+WARN[0000] You also need to implement the Encoders and Decoders!
+WARN[0000] ===============================================================
+```
+
+这是由于我们生成的是 grpc 服务，因此，我们需要将 proto 文件完善后，才算是真正的创建服务成功。
+
+
+### 完善 proto 文件
+```protobuf title='./novels/pkg/grpc/pb/novels.proto'
+syntax = "proto3";
+
+package pb;
+
+option go_package = ".;novels";
+
+import "google/protobuf/any.proto";
+import "google/protobuf/timestamp.proto";
+
+// The Novels service definition.
+service Novels {
+  rpc Browse(BrowseRequest) returns (BrowseReply);
+}
+
+enum State {
+  UNKONWN   = 0;
+  DRAFT     = 1;
+  REVIEWING = 2;
+  // schedule publish
+  PENDING   = 3;
+  PUBLISHED = 4;
+  REJECTED  = 5;
+}
+
+message Novel {
+  uint64                    id         = 1;
+  string                    uuid       = 2;
+  string                    name       = 3;
+  string                    slug       = 4;
+  string                    author     = 5;
+  string                    summary    = 6;
+  string                    cover      = 7;
+  bool                      finished   = 8;
+  State                     state      = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+  google.protobuf.Timestamp deleted_at = 12;
+}
+
+message BrowseRequest {
+  uint64 page     = 1;
+  uint64 paginate = 2;
+}
+
+message BrowseReply {
+  repeated Novel data = 3;
+}
+```
+
+之后进入目录，执行 `compile.sh` 文件:
+
+```shell
+# 一定要进入目录后才运行 sh 文件，否则会提示找不到 proto 文件
+cd ./novels/pkg/grpc/pb 
+
+./compile.sh
+```
+
+### 编写 service.go 业务代码
+
+```go title="./novels/pkg/service.go"
+func (b *basicNovelsService) Browse(ctx context.Context, request interface{}) (rs interface{}, err error) {
+	data := []*pb.Novel{
+		{
+			Id:        1,
+			Uuid:      uuid.New().String(),
+			Name:      "我的青春恋爱物语果然有问题",
+			Slug:      "oregairu",
+			Author:    "渡航",
+			Summary:   "我的本命番剧～",
+			Cover:     "https://rin.linovel.net/article_cover/1049857_837d7b4fd14145e3818b48d36a53f0e2.jpg",
+			Finished:  true,
+			State:     pb.State_PUBLISHED,
+			CreatedAt: ptypes.TimestampNow(),
+			UpdatedAt: ptypes.TimestampNow(),
+		},
+		{
+			Id:        2,
+			Uuid:      uuid.New().String(),
+			Name:      "化物语",
+			Slug:      "Bakemonogatari",
+			Author:    "西尾维新",
+			Summary:   "高中三年级学生・阿良良木历在5月的某天，在学校意外得知同班两年、从未对话的同学战场原黑仪的秘密。那就是她身上几乎没有体重。",
+			Cover:     "https://upload.wikimedia.org/wikipedia/zh/5/54/%E5%8C%96%E7%89%A9%E8%AA%9ELogo1.png",
+			Finished:  true,
+			State:     pb.State_PUBLISHED,
+			CreatedAt: ptypes.TimestampNow(),
+			UpdatedAt: ptypes.TimestampNow(),
+		},
+	}
+
+	req := request.(*pb.BrowseRequest)
+	page := req.Page
+	if page == 0 {
+		page = 1
+	}
+
+	paginate := req.Paginate
+	if paginate == 0 {
+		paginate = 2
+	}
+
+	from := (page - 1) * paginate
+	to := page * paginate
+	rs = data[from:to]
+
+	return rs, err
+}
+```
+
+### 完善 grpc/handler.go 文件
+
+我们通过 `generate` 命令 `grpc/handler.go` 文件后，会看到对应的函数是 `TODO` 状态的，因此我们要完善它。
+
+在 `grpc/handler.go` 中，我们主要要做的工作就是将 `grpc` 请求的参数解码成 `endpoint` 的参数，然后再将 `endpoint` 的响应转换成 `grpc` 请求的响应:
+
+```go title="./novels/pkg/grpc/handler.go"
+// 将 grpc 的请求转换成 endpoint 请求
+func decodeBrowseRequest(_ context.Context, r interface{}) (interface{}, error) {
+	req := r.(*pb.BrowseRequest)
+	return endpoint.BrowseRequest{
+		Request: req,
+	}, nil
+}
+
+// 将 endpoint 的响应转换成 grpc 响应
+func encodeBrowseResponse(_ context.Context, r interface{}) (interface{}, error) {
+	res := r.(endpoint.BrowseResponse)
+	return &pb.BrowseReply{
+		Data: res.Rs.([]*pb.Novel),
+	}, nil
+}
+```
+
+### 生成 grpc client
+
+通过命令生成 grpc 的 client 之后，我们便可以编写测试了。
+
+```shell
+kit generate client novels -t grpc -i ./novels/pkg/grpc/pb/novels.proto
+```
+
+这样我们的第一个微服务就算是差不多完成了。
+
+### 启动微服务
+
+要启动微服务，我们只需运行以下命令即可轻松启动：
+
+```shell
+go run ./novels/cmd/main.go
+
+# 之后便会看到如下输出
+ts=2021-08-02T16:24:52.057061Z caller=service.go:87 tracer=none
+ts=2021-08-02T16:24:52.057628Z caller=service.go:109 transport=gRPC addr=:8082
+ts=2021-08-02T16:24:52.057667Z caller=service.go:146 transport=debug/HTTP addr=:8080
+```
+
+我们可以看到，`grpc` 服务已经在 `8082` 端口启动了。
+
+### 使用 grpcurl 测试
+
+`grpcurl` 是一个能通过类似 `curl` 的方式来与 `grpc` 服务交互的工具，可以做到无代码请求你的 `grpc` 服务，十分方便。
+
+具体文档可以查看其[仓库](https://github.com/fullstorydev/grpcurl)。
+
+#### 安装
+
+以下仅提供几种简单的安装命令，若没有适合你的，请到[文档](https://github.com/fullstorydev/grpcurl)处查找适合你的安装方式。
+
+```shell
+# macOS 通过 Homebrew 安装
+brew install grpcurl
+
+# Arch 系通过 pacman 安装
+pacman -Sy grpcurl
+
+# Debian 系通过 apt 安装
+apt-get install grpcurl
+
+# 通过 Docker 安装
+## 下载镜像
+docker pull fullstorydev/grpcurl:latest
+## 运行
+docker run fullstorydev/grpcurl api.grpc.me:443 list
+
+# 通过 go 安装
+go get github.com/fullstorydev/grpcurl/...
+go install github.com/fullstorydev/grpcurl/cmd/grpcurl
+```
+
+安装完 `grpcurl` 后，我们还需要给 `grpc` 服务添加反射后才可以正常使用。
+
+```go title="./novels/cmd/service/service.go" {18}
+import (
+  "google.golang.org/grpc/reflection"
+)
+// ...
+func initGRPCHandler(endpoints endpoint.Endpoints, g *group.Group) {
+	options := defaultGRPCOptions(logger, tracer)
+	// Add your GRPC options here
+
+	grpcServer := grpc.NewGRPCServer(endpoints, options)
+	grpcListener, err := net.Listen("tcp", *grpcAddr)
+	if err != nil {
+		logger.Log("transport", "gRPC", "during", "Listen", "err", err)
+	}
+	g.Add(func() error {
+		logger.Log("transport", "gRPC", "addr", *grpcAddr)
+		baseServer := grpc1.NewServer()
+		pb.RegisterNovelsServer(baseServer, grpcServer)
+		reflection.Register(baseServer)
+		return baseServer.Serve(grpcListener)
+	}, func(error) {
+		grpcListener.Close()
+	})
+
+}
+```
+#### 测试
+
+首先我们启动 `grpc` 服务。
+
+```bash
+go run ./novels/cmd/main.go
+```
+
+启动之后，我们开启一个新的终端，来运行 `grpcurl` 命令。
+
+##### 通过 list 来查看现有的服务：
+```bash
+grpcurl -plaintext localhost:8082 list
+## grpc.reflection.v1alpha.ServerReflection
+## pb.Novels
+```
+
+##### 通过 list pb.Novels 可以查看该服务支持的请求方法
+```bash
+grpcurl -plaintext localhost:8082 list pb.Novels
+## pb.Novels.Browse
+```
+
+知道了支持的方法后，我们便可以开始测试了。
+
+##### 无参数请求
+```bash
+grpcurl -plaintext localhost:8082 pb.Novels/Browse
+
+'{
+  "data": [
+    {
+      "id": "1",
+      "uuid": "a26277e2-8634-4b63-9efc-b036cbeb0875",
+      "name": "我的青春恋爱物语果然有问题",
+      "slug": "oregairu",
+      "author": "渡航",
+      "summary": "我的本命番剧～",
+      "cover": "https://rin.linovel.net/article_cover/1049857_837d7b4fd14145e3818b48d36a53f0e2.jpg",
+      "finished": true,
+      "state": "PUBLISHED",
+      "createdAt": "2021-08-02T16:55:21.533537Z",
+      "updatedAt": "2021-08-02T16:55:21.533538Z"
+    },
+    {
+      "id": "2",
+      "uuid": "66fe39c7-fb88-4858-840d-dede2ca20df5",
+      "name": "化物语",
+      "slug": "Bakemonogatari",
+      "author": "西尾维新",
+      "summary": "高中三年级学生・阿良良木历在5月的某天，在学校意外得知同班两年、从未对话的同学战场原黑仪的秘密。那就是她身上几乎没有体重。",
+      "cover": "https://upload.wikimedia.org/wikipedia/zh/5/54/%E5%8C%96%E7%89%A9%E8%AA%9ELogo1.png",
+      "finished": true,
+      "state": "PUBLISHED",
+      "createdAt": "2021-08-02T16:55:21.533538Z",
+      "updatedAt": "2021-08-02T16:55:21.533538Z"
+    }
+  ]
+}'
+```
+
+#### 带参数请求
+```bash
+grpcurl -plaintext -d '{"page": 2, "paginate": 1}' localhost:8082 pb.Novels/Browse
+
+'{
+  "data": [
+    {
+      "id": "2",
+      "uuid": "66fe39c7-fb88-4858-840d-dede2ca20df5",
+      "name": "化物语",
+      "slug": "Bakemonogatari",
+      "author": "西尾维新",
+      "summary": "高中三年级学生・阿良良木历在5月的某天，在学校意外得知同班两年、从未对话的同学战场原黑仪的秘密。那就是她身上几乎没有体重。",
+      "cover": "https://upload.wikimedia.org/wikipedia/zh/5/54/%E5%8C%96%E7%89%A9%E8%AA%9ELogo1.png",
+      "finished": true,
+      "state": "PUBLISHED",
+      "createdAt": "2021-08-02T16:55:21.533538Z",
+      "updatedAt": "2021-08-02T16:55:21.533538Z"
+    }
+  ]
+}'
+```
+
+:::caution
+由于我们没有配置证书，因此我们一定要加上 `-plaintext` 来使其正常运行，否则会出现如下错误：
+
+`Failed to dial target host "localhost:8082": tls: first record does not look like a TLS handshake`
+:::
+
+### 使用生成的 client 测试
+
+我们可以通过编写测试用例，来测试：
+
+```go title="./novels/client/grpc/grpc_test.go"
+package grpc_test
+
+import (
+	"context"
+	"log"
+	"testing"
+	"time"
+
+	pb "github.com/moecasts/microcasts/novels/pkg/grpc/pb"
+	"github.com/stretchr/testify/assert"
+	"google.golang.org/grpc"
+)
+
+func TestBrowse(t *testing.T) {
+	conn, svc, ctx, cancel := setup()
+	defer conn.Close()
+	defer cancel()
+
+	t.Run("Browse novels without params", func(t *testing.T) {
+		data, err := svc.Browse(ctx, &pb.BrowseRequest{})
+		if err != nil {
+			log.Fatalf("could not browse: %v", err)
+		}
+		assert.Nil(t, err)
+		assert.NotEmpty(t, data)
+	})
+}
+
+func setup() (*grpc.ClientConn, pb.NovelsClient, context.Context, context.CancelFunc) {
+	conn, err := grpc.Dial("127.0.0.1:8082", grpc.WithInsecure(), grpc.WithBlock())
+	if err != nil {
+		log.Fatalf("did not connect: %+v", err)
+	}
+
+	svc := pb.NewNovelsClient(conn)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	return conn, svc, ctx, cancel
+}
+```
+
+编写完测试用例后，我们通过以下命令即可完成测试：
+
+```bash
+# 启动 grpc 服务
+go run ./novels/cmd/main.go
+
+# 运行测试
+go test ./novels/client/grpc/grpc_test.go -v
+```
+
+之后我们便可以看到测试运行成功了！
+
+```plaintext
+=== RUN   TestBrowse
+=== RUN   TestBrowse/Browse_novels_without_params
+--- PASS: TestBrowse (0.00s)
+    --- PASS: TestBrowse/Browse_novels_without_params (0.00s)
+PASS
+ok  	command-line-arguments	0.174s
+```

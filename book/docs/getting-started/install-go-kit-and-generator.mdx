@@ -1,0 +1,29 @@
+---
+sidebar_position: 1
+---
+
+# 安装 Go-kit 代码生成器
+
+## 安装生成器
+
+创建微服务时，常常需要写许多模版代码，而使用代码生成器可以减少我们这方面的工作，因此安装一个好的代码生成器是十分有必要的，这里我选择的比较方便的 [GrantZheng/kit](https://github.com/GrantZheng/kit)
+
+### 准备
+
+该生成器的 grpc 部分依赖于其他包，因此，要先安装前置包后，再安装生成器，才能正常工作。
+
+```shell
+go get -u google.golang.org/grpc
+go get -u github.com/golang/protobuf/protoc-gen-go
+```
+
+### 安装
+
+安装步骤十分简单，只需运行以下几行命令即可：
+
+```shell
+git clone https://github.com/GrantZheng/kit.git
+cd kit
+go install
+```
+
