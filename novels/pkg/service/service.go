@@ -5,6 +5,8 @@ import (
 
 	"github.com/google/uuid"
 	pb "github.com/moecasts/microcasts/novels/pkg/grpc/pb"
+	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 
 	"github.com/golang/protobuf/ptypes"
 )
@@ -48,7 +50,9 @@ type NovelsService interface {
 	BatchDestroy(ctx context.Context, pks interface{}) (rs interface{}, err error)
 }
 
-type basicNovelsService struct{}
+type basicNovelsService struct {
+	db *gorm.DB
+}
 
 func (b *basicNovelsService) Browse(ctx context.Context, request interface{}) (rs interface{}, err error) {
 	data := []*pb.Novel{
@@ -144,7 +148,17 @@ func (b *basicNovelsService) BatchDestroy(ctx context.Context, pks interface{}) 
 
 // NewBasicNovelsService returns a naive, stateless implementation of NovelsService.
 func NewBasicNovelsService() NovelsService {
-	return &basicNovelsService{}
+	dsn := "host=localhost user=default password=secret dbname=microcasts port=5432 sslmode=disable TimeZone=Asia/Shanghai"
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	if err != nil {
+		panic(err)
+	}
+
+	db.AutoMigrate(&pb.NovelORM{})
+
+	return &basicNovelsService{
+		db: db,
+	}
 }
 
 // New returns a NovelsService with all of the expected middleware wired in.

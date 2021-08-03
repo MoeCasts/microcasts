@@ -11,4 +11,4 @@
 # See also
 #  https://github.com/grpc/grpc-go/tree/master/examples
 
-protoc novels.proto --go_out=plugins=grpc:.
+protoc novels.proto -I. -I${GOPATH}/src/protoc-gen-gorm --go_out=plugins=grpc:. --gorm_out="engine=postgres:."
