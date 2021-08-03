@@ -1,0 +1,147 @@
+syntax = "proto3";
+
+package pb;
+
+option go_package = ".;novels";
+
+import "google/protobuf/any.proto";
+import "google/protobuf/timestamp.proto";
+
+// The Novels service definition.
+service Novels {
+  rpc Browse(BrowseRequest) returns (BrowseReply);
+  rpc Read(ReadRequest) returns (ReadReply);
+  rpc Add(AddRequest) returns (AddReply);
+  rpc Edit(EditRequest) returns (EditReply);
+  rpc Trash(TrashRequest) returns (TrashReply);
+  rpc Restore(RestoreRequest) returns (RestoreReply);
+  rpc Destroy(DestroyRequest) returns (DestroyReply);
+  rpc BatchAdd(BatchAddRequest) returns (BatchAddReply);
+  rpc BatchEdit(BatchEditRequest) returns (BatchEditReply);
+  rpc BatchTrash(BatchTrashRequest) returns (BatchTrashReply);
+  rpc BatchRestore(BatchRestoreRequest) returns (BatchRestoreReply);
+  rpc BatchDestroy(BatchDestroyRequest) returns (BatchDestroyReply);
+}
+
+enum State {
+  UNKONWN   = 0;
+  DRAFT     = 1;
+  REVIEWING = 2;
+  // schedule publish
+  PENDING   = 3;
+  PUBLISHED = 4;
+  REJECTED  = 5;
+}
+
+message Novel {
+  uint64                    id         = 1;
+  string                    uuid       = 2;
+  string                    name       = 3;
+  string                    slug       = 4;
+  string                    author     = 5;
+  string                    summary    = 6;
+  string                    cover      = 7;
+  bool                      finished   = 8;
+  State                     state      = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+  google.protobuf.Timestamp deleted_at = 12;
+}
+
+message PrimaryKey {
+  oneof pk {
+    uint64 id   = 1;
+    string uuid = 2;
+  }
+}
+
+message BrowseRequest {
+  uint64 page     = 1;
+  uint64 paginate = 2;
+}
+
+message BrowseReply {
+  repeated Novel data = 3;
+}
+
+message ReadRequest {
+  PrimaryKey                       pk        = 1;
+  map<string, google.protobuf.Any> condition = 2;
+}
+
+message ReadReply {
+  Novel data = 1;
+}
+
+message AddRequest {
+  Novel data = 1;
+}
+
+message AddReply {
+  Novel data = 1;
+}
+
+message EditRequest {
+  PrimaryKey pk   = 1;
+  Novel      data = 2;
+}
+
+message EditReply {
+  Novel data = 1;
+}
+
+message TrashRequest {
+  PrimaryKey pk = 1;
+}
+
+message TrashReply {}
+
+message RestoreRequest {
+  PrimaryKey pk = 1;
+}
+
+message RestoreReply {
+  Novel novel = 1;
+}
+
+message DestroyRequest {
+  PrimaryKey pk = 1;
+}
+
+message DestroyReply {}
+
+message BatchAddRequest {
+  repeated Novel data = 1;
+}
+
+message BatchAddReply {
+  repeated Novel data = 1;
+}
+
+message BatchEditRequest {
+  repeated Novel data = 1;
+}
+
+message BatchEditReply {
+  repeated Novel data = 1;
+}
+
+message BatchTrashRequest {
+  repeated PrimaryKey pks = 1;
+}
+
+message BatchTrashReply {}
+
+message BatchRestoreRequest {
+  repeated PrimaryKey pks = 1;
+}
+
+message BatchRestoreReply {
+  repeated Novel data = 1;
+}
+
+message BatchDestroyRequest {
+  repeated PrimaryKey pks = 1;
+}
+
+message BatchDestroyReply {}
