@@ -3,12 +3,10 @@ package service
 import (
 	"context"
 
-	"github.com/google/uuid"
 	pb "github.com/moecasts/microcasts/novels/pkg/grpc/pb"
-	"gorm.io/driver/postgres"
+	// "gorm.io/driver/postgres"
+	"github.com/moecasts/microcasts"
 	"gorm.io/gorm"
-
-	"github.com/golang/protobuf/ptypes"
 )
 
 // NovelsService describes the service.
@@ -55,49 +53,55 @@ type basicNovelsService struct {
 }
 
 func (b *basicNovelsService) Browse(ctx context.Context, request interface{}) (rs interface{}, err error) {
-	data := []*pb.Novel{
-		{
-			Id:        1,
-			Uuid:      uuid.New().String(),
-			Name:      "我的青春恋爱物语果然有问题",
-			Slug:      "oregairu",
-			Author:    "渡航",
-			Summary:   "我的本命番剧～",
-			Cover:     "https://rin.linovel.net/article_cover/1049857_837d7b4fd14145e3818b48d36a53f0e2.jpg",
-			Finished:  true,
-			State:     pb.State_PUBLISHED,
-			CreatedAt: ptypes.TimestampNow(),
-			UpdatedAt: ptypes.TimestampNow(),
-		},
-		{
-			Id:        2,
-			Uuid:      uuid.New().String(),
-			Name:      "化物语",
-			Slug:      "Bakemonogatari",
-			Author:    "西尾维新",
-			Summary:   "高中三年级学生・阿良良木历在5月的某天，在学校意外得知同班两年、从未对话的同学战场原黑仪的秘密。那就是她身上几乎没有体重。",
-			Cover:     "https://upload.wikimedia.org/wikipedia/zh/5/54/%E5%8C%96%E7%89%A9%E8%AA%9ELogo1.png",
-			Finished:  true,
-			State:     pb.State_PUBLISHED,
-			CreatedAt: ptypes.TimestampNow(),
-			UpdatedAt: ptypes.TimestampNow(),
-		},
-	}
+	// data := []*pb.NovelORM{
+	// {
+	// 	Id:        1,
+	// 	Uuid:      uuid.New().String(),
+	// 	Name:      "我的青春恋爱物语果然有问题",
+	// 	Slug:      "oregairu",
+	// 	Author:    "渡航",
+	// 	Summary:   "我的本命番剧～",
+	// 	Cover:     "https://rin.linovel.net/article_cover/1049857_837d7b4fd14145e3818b48d36a53f0e2.jpg",
+	// 	Finished:  true,
+	// 	State:     pb.State_PUBLISHED,
+	// 	CreatedAt: ptypes.TimestampNow(),
+	// 	UpdatedAt: ptypes.TimestampNow(),
+	// },
+	// {
+	// 	Id:        2,
+	// 	Uuid:      uuid.New().String(),
+	// 	Name:      "化物语",
+	// 	Slug:      "Bakemonogatari",
+	// 	Author:    "西尾维新",
+	// 	Summary:   "高中三年级学生・阿良良木历在5月的某天，在学校意外得知同班两年、从未对话的同学战场原黑仪的秘密。那就是她身上几乎没有体重。",
+	// 	Cover:     "https://upload.wikimedia.org/wikipedia/zh/5/54/%E5%8C%96%E7%89%A9%E8%AA%9ELogo1.png",
+	// 	Finished:  true,
+	// 	State:     pb.State_PUBLISHED,
+	// 	CreatedAt: ptypes.TimestampNow(),
+	// 	UpdatedAt: ptypes.TimestampNow(),
+	// },
+	// }
 
-	req := request.(*pb.BrowseRequest)
-	page := req.Page
-	if page == 0 {
-		page = 1
-	}
+	// req := request.(*pb.BrowseRequest)
+	// page := req.Page
+	// if page == 0 {
+	// 	page = 1
+	// }
+	//
+	// paginate := req.Paginate
+	// if paginate == 0 {
+	// 	paginate = 2
+	// }
+	//
+	// from := (page - 1) * paginate
+	// to := page * paginate
+	// rs = data[from:to]
+	// rs = data
 
-	paginate := req.Paginate
-	if paginate == 0 {
-		paginate = 2
-	}
+	novels := []pb.NovelORM{}
+	b.db.Find(&novels)
 
-	from := (page - 1) * paginate
-	to := page * paginate
-	rs = data[from:to]
+	rs = novels
 
 	return rs, err
 }
@@ -148,16 +152,42 @@ func (b *basicNovelsService) BatchDestroy(ctx context.Context, pks interface{}) 
 
 // NewBasicNovelsService returns a naive, stateless implementation of NovelsService.
 func NewBasicNovelsService() NovelsService {
-	dsn := "host=localhost user=default password=secret dbname=microcasts port=5432 sslmode=disable TimeZone=Asia/Shanghai"
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
-	if err != nil {
-		panic(err)
-	}
+	// dsn := "host=localhost user=default password=secret dbname=microcasts port=5432 sslmode=disable TimeZone=Asia/Shanghai"
+	// db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	// if err != nil {
+	// 	panic(err)
+	// }
+	//
+	// db.AutoMigrate(&pb.NovelORM{})
 
-	db.AutoMigrate(&pb.NovelORM{})
+	// var id uint64 = 1
+	// novels := []pb.NovelORM{
+	// 	{
+	// 		Name:     "我的青春恋爱物语果然有问题",
+	// 		Slug:     "oregairu",
+	// 		Author:   "渡航",
+	// 		Summary:  "我的本命番剧～",
+	// 		Cover:    "https://rin.linovel.net/article_cover/1049857_837d7b4fd14145e3818b48d36a53f0e2.jpg",
+	// 		Finished: true,
+	// 		State:    int32(pb.State_PUBLISHED),
+	// 	},
+	// 	{
+	// 		Name:   "化物语",
+	// 		Slug:   "Bakemonogatari",
+	// 		Author: "西尾维新",
+	// 		// Summary:   "高中三年级学生・阿良良木历在5月的某天，在学校意外得知同班两年、从未对话的同学战场原黑仪的秘密。那就是她身上几乎没有体重。",
+	// 		Cover: "https://upload.wikimedia.org/wikipedia/zh/5/54/%E5%8C%96%E7%89%A9%E8%AA%9ELogo1.png",
+	// 		// Finished: true,
+	// 	},
+	// }
+	//
+	// db.Create(&novels)
+	//
+	// // fmt.Printf("%+v\n", novels[0].Id)
+	// fmt.Printf("%+v", novels)
 
 	return &basicNovelsService{
-		db: db,
+		db: microcasts.Orm(),
 	}
 }
 

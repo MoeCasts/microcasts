@@ -2,6 +2,7 @@ package service_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	pb "github.com/moecasts/microcasts/novels/pkg/grpc/pb"
@@ -14,6 +15,7 @@ func TestBrowse(t *testing.T) {
 
 	t.Run("Browse novels without params", func(t *testing.T) {
 		data, err := svc.Browse(ctx, &pb.BrowseRequest{})
+		fmt.Printf("%+v", data)
 		assert.Nil(t, err)
 		assert.NotEmpty(t, data)
 	})

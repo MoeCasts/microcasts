@@ -1,0 +1,13 @@
+name: novels
+
+postgres:
+  - name: default
+    user: default
+    password: secret
+    host: 127.0.0.1
+    port: 5432
+    database: microcasts
+    sslmode: disable
+    timezone: Asia/Shanghai
+
+

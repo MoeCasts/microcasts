@@ -8,6 +8,11 @@ replace github.com/moecasts/microcasts => ./
 replace github.com/moecasts/microcasts/novels => ./novels
 
 require (
-	github.com/infobloxopen/protoc-gen-gorm v0.21.0 // indirect
-	github.com/moecasts/microcasts/novels v0.0.0-00010101000000-000000000000 // indirect
+	github.com/jackc/pgx/v4 v4.13.0 // indirect
+	github.com/kr/pretty v0.2.0 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
+	github.com/spf13/viper v1.8.1
+	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
+	gorm.io/driver/postgres v1.1.0
+	gorm.io/gorm v1.21.12
 )
